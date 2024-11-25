@@ -1,33 +1,14 @@
-# 1- Install NGINX Ingress Controller
-```
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-
-helm install nginx-ingress ingress-nginx/ingress-nginx \
---namespace ingress-nginx --create-namespace
-```
-
-# 2- Install MetalLB CRDs
+# 1- Install MetalLB CRDs
 ```
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/main/config/crd/bases/metallb.io_ipaddresspools.yaml
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/main/config/crd/bases/metallb.io_l2advertisements.yaml
 ```
 
-### Verify that the CRDs are installed
-```
-kubectl get crds | grep metallb 
-```
-```
-You should see the following output:
-ipaddresspools.metallb.io
-l2advertisements.metallb.io
-```
-
-# 3- Install MetalLB Components
+# 2- Install MetalLB Components
 ```
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/main/config/manifests/metallb-native.yaml
 ```
-# 4- Edit Configuration
+# 3- Edit Configuration
 ```
 # Set Config
 export EDITOR=nano
@@ -41,7 +22,7 @@ mode: "ipvs"
 ipvs:
   strictARP: true
 ``` 
-# 5- Apply Your MetalLB Configuration
+# 4- Apply Your MetalLB Configuration
 ```
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -50,7 +31,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.67.100-192.168.67.110
+    - 192.168.1.240-192.168.1.250
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
@@ -69,11 +50,18 @@ metadata:
 data:
   config: |
     address-pools:
-    - name: default
+    - name: my-ip-pool
       protocol: layer2
       addresses:
-      - 192.168.67.100-192.168.67.110
+      - 192.168.1.240-192.168.1.250
+```
+# 5- Install NGINX Ingress Controller
+```
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
 
+helm install nginx-ingress ingress-nginx/ingress-nginx \
+--namespace ingress-nginx --create-namespace
 ```
 
 # 6- Run Deployments And SVCs
@@ -87,7 +75,6 @@ kubectl expose deployment app2 --type=LoadBalancer --port=80
 ```
 
 # 7- Create Ingress Resources
-### App 1
 ```
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -107,9 +94,8 @@ spec:
                 name: app1
                 port:
                   number: 80
-```
-### App 2
-```
+---
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -128,36 +114,4 @@ spec:
                 name: app2
                 port:
                   number: 80
-```
-
-kubectl delete pod -n kube-system -l k8s-app=kube-dns
-
-
-# ssl termination
-```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.yaml
-```
-
-# 8- Add host to /etc/hosts
-```
-sudo nano /etc/hosts
-192.168.49.2  myapp.local
-```
-# 9- Connect with online domain
-```
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
-cloudflared login
-cloudflared tunnel create my-k8s-tunnel
-mkdir -p ~/.cloudflared
-nano ~/.cloudflared/config.yml
-
-tunnel: <UUID>  # Replace <UUID> with the tunnel ID
-credentials-file: /root/.cloudflared/<UUID>.json
-
-ingress:
-  - hostname: isteqdamq8.com
-    service: http://192.168.49.2:30933  # Your Ingress Controller IP and Port
-  - service: http_status:404
-
 ```

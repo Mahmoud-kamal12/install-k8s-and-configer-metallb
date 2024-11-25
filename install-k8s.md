@@ -1,7 +1,6 @@
-# install k8s
-
-## install containerd:
-```bash
+# 1- Install containerd and configure system
+- prepare the system
+```
 
 sudo swapoff -a
 sudo sed -i '/ swap / s/^/#/' /etc/fstab
@@ -26,7 +25,9 @@ EOF
 sudo sysctl --system
 
 sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
-
+```
+- Install containerd and configure it:
+```
 wget https://github.com/containerd/containerd/releases/download/v1.6.17/containerd-1.6.17-linux-amd64.tar.gz
 sudo tar Cxzvf /usr/local containerd-1.6.17-linux-amd64.tar.gz
 sudo mkdir -p /usr/local/lib/systemd/system/
@@ -43,14 +44,15 @@ sudo mv config.toml /etc/containerd/config.toml
 sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
 
 sudo systemctl restart containerd
+```
 
-## Install runc:
-
+## 2- Install runc:
+```
 wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64
 sudo install -m 755 runc.amd64 /usr/local/sbin/runc
-
-## Install cni plugins:
-
+```
+## 3- Install cni plugins:
+```
 wget https://github.com/containernetworking/plugins/releases/download/v1.2.0/cni-plugins-linux-amd64-v1.2.0.tgz
 sudo mkdir -p /opt/cni/bin
 sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.2.0.tgz
@@ -64,9 +66,9 @@ EOF
 export CRI_CONFIG_FILE=/etc/crictl.yaml
 echo "export CRI_CONFIG_FILE=/etc/crictl.yaml" >> ~/.bashrc
 source ~/.bashrc
-
-## Install kubelet, kubeadm, kubectl:
-
+```
+## 4- Install kubelet, kubeadm, kubectl:
+```
 sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl gpg
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -84,8 +86,10 @@ sudo systemctl daemon-reload
 sudo systemctl restart containerd
 sudo systemctl restart kubelet
 sudo update-ca-certificates
+```
 
-
+# 5- Open ports for k8s 
+```
 sudo iptables -A INPUT -p tcp --dport 6443 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 9403 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 6444 -j ACCEPT
@@ -97,9 +101,7 @@ sudo iptables -A INPUT -p tcp --dport 10257 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 10250 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+```
 
-sudo iptables -L | grep 6443
-sudo hostnamectl set-hostname 	test-ssl-worker
-sudo nano /etc/hosts
-hostnamectl
-/etc/kubernetes/pki/ca.crt
+# *Important Notes After Installation*
+> **Once you have completed these steps, you can save this setup as a template for future use. This allows you to easily replicate the process to set up additional nodes in your Kubernetes cluster.** 
